@@ -433,5 +433,3 @@ def rarity2vec(rarity):
 
 if __name__ == "__main__":
     main()
-message.txt
-5 KB
