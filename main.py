@@ -5,6 +5,9 @@ from gensim.models.doc2vec import Doc2Vec,\
 import nltk
 from nltk.tokenize import word_tokenize
 nltk.download('punkt_tab')
+from sklearn.preprocessing import normalize
+import numpy as np
+from math import log, isnan
 
 type_weight = 1.0
 text_weight = 1.0
@@ -19,44 +22,41 @@ def main():
     else:
         cards_data = pandas.read_csv("processed-cards.csv")
 
+    card_vecs = []
     for index, row in cards_data.iterrows():
         card_vec = card2vec(row)
-        quit()
-
-        # want to write card_vec to a file alongside the card's name as an identifier.
-        # need to contend with writing 30,000 vectors to a file.
+        card_vecs.append(card_vec)
 
 def card2vec(card_data):
     type_vec = type2vec(card_data['type_line'])
-    text_vec = text2vec(card_data['name'] + ": " + card_data['oracle_text'])
+    text_vec = text2vec((card_data['name']) + ": " + str(card_data['oracle_text']))
     colors_vec = colors2vec(card_data['colors'])
     rarity_vec = rarity2vec(card_data['rarity'])
-    if card_data['power'].isdigit():
-        power_vec = card_data['power']
+    if card_data['power'].is_integer():
+        power_vec = [card_data['power']]
     else:
         power_vec = [0]
-    if card_data['cmc'].isdigit():
-        cmc_vec = card_data['cmc']
+    if card_data['cmc'].is_integer():
+        cmc_vec = [card_data['cmc']]
     else:
         cmc_vec = [0]
-    if card_data['toughness'].isdigit():
-        toughness_vec = card_data['toughness']
+    if card_data['toughness'].is_integer():
+        toughness_vec = [card_data['toughness']]
     else:
         toughness_vec = [0]
 
-    
-    type_vec = type_weight * type_vec.normalize()
-    text_vec = text_weight * text_vec.normalize()
-    colors_vec = colors_weight * colors_vec.normalize()
-    rarity_vec = rarity_weight * rarity_vec
-    power_vec *= power_toughness_weight
-    toughness_vec *= power_toughness_weight
-    cmc_vec *= cmc_weight
-    card_vector = type_vec + text_vec + colors_vec + rarity_vec + power_vec + toughness_vec + cmc_vec
-    return card_vector
+    type_vec = [float(i) / max(sum(type_vec), 1) * type_weight for i in type_vec]
+    text_vec = [float(i) / max(sum(text_vec), 1) * text_weight for i in text_vec]
+    colors_vec = [float(i) / max(sum(colors_vec), 1) * colors_weight for i in colors_vec]
+    rarity_vec = [float(i) / max(sum(rarity_vec), 1) * rarity_weight for i in rarity_vec]
+    power_vec = [i * power_toughness_weight for i in power_vec]
+    toughness_vec = [i * power_toughness_weight for i in toughness_vec]
+    cmc_vec = [float(i) / max(sum(cmc_vec), 1) * cmc_weight for i in cmc_vec]
+    card_vec = type_vec + text_vec + colors_vec + rarity_vec + power_vec + toughness_vec + cmc_vec    
+
+    return card_vec
 
 def text2vec(text):
-
     # preproces the documents, and create TaggedDocuments
     tagged_data = [TaggedDocument(words=word_tokenize(doc.lower()),
                                 tags=[str(i)]) for i,
@@ -74,11 +74,6 @@ def text2vec(text):
     document_vectors = [model.infer_vector(
         word_tokenize(doc.lower())) for doc in text]
 
-    #  print the document vectors
-    for i, doc in enumerate(text):
-        print("Document", i+1, ":", doc)
-        print("Vector:", document_vectors[i])
-        print()
     return document_vectors[0]
 
 def type2vec(type_line):
@@ -112,8 +107,13 @@ def type2vec(type_line):
     return vec
 
 def colors2vec(colors):
-    # Colors are W, U, B, R, G
-    vec = [0, 0, 0, 0, 0]
+    vec = [0, 0, 0, 0, 0, 0]
+    try:
+        colors = int(colors)
+    except:
+        return vec
+
+    # Colors are W, U, B, R, G, C
     if "W" in colors:
         vec[0] = 1
     if "U" in colors:
@@ -124,6 +124,8 @@ def colors2vec(colors):
         vec[3] = 1
     if "G" in colors:
         vec[4] = 1
+    if "C" in colors:
+        vec[5] = 1
 
     return vec
 
@@ -142,3 +144,4 @@ def rarity2vec(rarity):
 
 if __name__ == "__main__":
     main()
+
