@@ -108,7 +108,7 @@ def main():
             print(list(cards.columns))
         else:
             cards = weight_cards(cards, args)          #weight_cards does all weights and normalizations
-            save_name = n_prefix+file[len(v_prefix):len(file)]
+            save_name = n_prefix+file
             cards.to_csv(save_name, index=0)
 
 
@@ -164,13 +164,13 @@ def card2vec(cards_data):
     rarity_vec = cards_data.loc[:, 'rarity'].to_frame().apply(lambda row: rarity2vec(row.values[0]), axis='columns', result_type='expand')
     rarity_vec.columns = ['Rarity']
 
-    power_vec = cards_data.loc[:, 'power'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    power_vec = cards_data.loc[:, 'power'].to_frame().apply(lambda row: 0 if isinstance(row.values[0], str) or not (row.values[0].is_integer()) else row.values[0], axis='columns', result_type='expand')
     power_vec.name = 'Power'
 
-    toughness_vec = cards_data.loc[:, 'toughness'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    toughness_vec = cards_data.loc[:, 'toughness'].to_frame().apply(lambda row: 0 if isinstance(row.values[0], str) or not (row.values[0].is_integer()) else row.values[0], axis='columns', result_type='expand')
     toughness_vec.name = 'Toughness'
 
-    cmc_vec = cards_data.loc[:, 'cmc'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    cmc_vec = cards_data.loc[:, 'cmc'].to_frame().apply(lambda row: 0 if isinstance(row.values[0], str) or not (row.values[0].is_integer()) else row.values[0], axis='columns', result_type='expand')
     cmc_vec.name = "CMC"
 
     name_vec = cards_data.loc[:, 'name']
@@ -181,14 +181,11 @@ def card2vec(cards_data):
     text_vecs.columns = ['text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20']
 
     combined = pandas.concat([type_vecs,text_vecs,mana_vecs,rarity_vec,power_vec,toughness_vec,cmc_vec,name_vec], axis=1)
-    print(text_vecs)
+    #print(text_vecs)
 
     return combined
 
 def text2vec(text):
-    
-    for d in text:
-        print(type(d))
         
     
     # preproces the documents, and create TaggedDocuments
@@ -260,7 +257,7 @@ def mana2vec(mana_cost):
     """
     if pandas.isnull(mana_cost):
         return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, mana_cost.count('{')]
+    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     
     for i in mana_cost:
         
@@ -294,6 +291,8 @@ def mana2vec(mana_cost):
              vec[4] += 1
         elif "S" in i:
             vec[9] += 1
+        elif "{" in i:
+            vec[10]+=1
     return vec
 
 def rarity2vec(rarity):
