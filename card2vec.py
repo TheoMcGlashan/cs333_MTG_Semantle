@@ -96,10 +96,7 @@ def main():
     if args.vector:
         cards_data = pandas.read_csv(file)
         
-        card_vecs = []
-        for index, row in cards_data.iterrows():    #for each card, convert it to a vector and append to card_vecs
-            card_vec = card2vec(row)
-            card_vecs.append(card_vec)
+        card_vecs = card2vec(cards_data)
         
         save_name = v_prefix+file
         pandas.DataFrame(card_vecs).set_axis(colnames, axis=1).to_csv(save_name, index=0)
@@ -149,36 +146,51 @@ def weight_cards(card_data, args):
 
     return card_data
 
-def card2vec(card_data):
+def card2vec(cards_data):
     """Takes a cards data and converts it into 7 different vectors and then appends them:
 
     Types line, text box (including type line and name), mana value, rarity, power, toughness, cmc
 
     adds name at the end
     """
-    type_vec = type2vec(card_data['type_line'])
-    text_vec = text2vec((card_data['name']) + ": " +  (card_data['type_line']) + " : " + str(card_data['oracle_text']))
-    mana_vec = mana2vec(card_data['mana_cost'])
-    rarity_vec = rarity2vec(card_data['rarity'])
-    if card_data['power'].is_integer():
-        power_vec = [card_data['power']]
-    else:
-        power_vec = [0]
-    if card_data['cmc'].is_integer():
-        cmc_vec = [card_data['cmc']]
-    else:
-        cmc_vec = [0]
-    if card_data['toughness'].is_integer():
-        toughness_vec = [card_data['toughness']]
-    else:
-        toughness_vec = [0]
 
-    card_vec = type_vec + text_vec.tolist() + mana_vec + rarity_vec + power_vec + toughness_vec + cmc_vec  
+    #applies a lambada of type2vec on the entire column, the rest of this is just dealing w/ data types. result_type = expanded maxes the 1 wide into n wide where n is # of types
+    type_vecs = cards_data.loc[:, 'type_line'].to_frame().apply(lambda row: type2vec(str(row)), axis='columns', result_type='expand')
+    type_vecs.columns = ['Creature', 'Instant', 'Sorcery', 'Enchantment','Artifact', 'Planeswalker', 'Battle', 'Land', 'Kindred', 'Basic', 'Snow', 'Legendary']
 
-    card_vec.append(card_data['name'])
-    return card_vec
+    mana_vecs = cards_data.loc[:, 'mana_cost'].to_frame().apply(lambda row: mana2vec(row.values[0]), axis='columns', result_type='expand')
+    mana_vecs.columns = ['W','U','B','R','G','C','Generic','X','Phyrexian','Snow_Mana','Pips']
+
+    rarity_vec = cards_data.loc[:, 'rarity'].to_frame().apply(lambda row: rarity2vec(row.values[0]), axis='columns', result_type='expand')
+    rarity_vec.columns = ['Rarity']
+
+    power_vec = cards_data.loc[:, 'power'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    power_vec.name = 'Power'
+
+    toughness_vec = cards_data.loc[:, 'toughness'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    toughness_vec.name = 'Toughness'
+
+    cmc_vec = cards_data.loc[:, 'cmc'].to_frame().apply(lambda row: row.values[0] if row.values[0].is_integer() else 0, axis='columns', result_type='expand')
+    cmc_vec.name = "CMC"
+
+    name_vec = cards_data.loc[:, 'name']
+    name_vec.name = 'Name'
+
+    text_vecs = text2vec(cards_data.loc[:, 'name'].map(str).values+ " " + cards_data['type_line'].map(str).values + " "+  cards_data['oracle_text'].map(str).values)
+    text_vecs = pandas.DataFrame(np.row_stack(text_vecs))
+    text_vecs.columns = ['text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20']
+
+    combined = pandas.concat([type_vecs,text_vecs,mana_vecs,rarity_vec,power_vec,toughness_vec,cmc_vec,name_vec], axis=1)
+    print(text_vecs)
+
+    return combined
 
 def text2vec(text):
+    
+    for d in text:
+        print(type(d))
+        
+    
     # preproces the documents, and create TaggedDocuments
     tagged_data = [TaggedDocument(words=word_tokenize(doc.lower()),
                                 tags=[str(i)]) for i,
@@ -196,7 +208,7 @@ def text2vec(text):
     document_vectors = [model.infer_vector(
         word_tokenize(doc.lower())) for doc in text]
 
-    return document_vectors[0]
+    return document_vectors
 
 def type2vec(type_line):
     """
@@ -234,6 +246,7 @@ def type2vec(type_line):
     return vec
 
 def mana2vec(mana_cost):
+
     """
     Converts mana cost to vector
 
@@ -245,18 +258,12 @@ def mana2vec(mana_cost):
      
     Generic is the total generic that could be used to cast the spell, Reaper King has Generic = 10 
     """
-    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-    try:
-        mana_cost = mana_cost.split("{")
-    except AttributeError:
-        return vec
-    for i in range(len(mana_cost)):
-        mana_cost[i] = mana_cost[i].strip("}")
-    # embeddings are W, U, B, R, G, C, Gen, X, Phy, S, Pips
-    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1]
+    if pandas.isnull(mana_cost):
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, mana_cost.count('{')]
+    
     for i in mana_cost:
-        vec[10] += 1
+        
         if "W" == i:
             vec[0] += 1
         elif "U" == i:
