@@ -1,7 +1,9 @@
 import json
 import sys
+
 import ijson
 import pandas
+
 
 def main():
 
@@ -22,99 +24,120 @@ def main():
     elif usage == "guilds_of_ravnica":
         guilds_of_ravnica(input_file, output_file)
 
+
 def guilds_of_ravnica(input_file, output_file):
     data = pandas.read_csv(input_file)
-    data = data[data['set_name'] == 'Guilds of Ravnica']
+    data = data[data["set_name"] == "Guilds of Ravnica"]
     data.to_csv(output_file, index=False)
+
 
 def convert_to_csv(input_file, output_file):
     first = True
-    with open(input_file, 'r', encoding='utf-8') as f, \
-        open(output_file, 'w', encoding='utf-8') as out_f:
-        out_f.write('name,mana_cost,type_line,oracle_text,colors,set_name,rarity,artist,power,toughness,cmc,keywords\n')
-        for item in ijson.items(f, 'item'):
+    with open(input_file, "r", encoding="utf-8") as f, open(
+        output_file, "w", encoding="utf-8"
+    ) as out_f:
+        out_f.write(
+            "name,mana_cost,type_line,oracle_text,colors,set_name,rarity,artist,power,toughness,cmc,keywords\n"
+        )
+        for item in ijson.items(f, "item"):
             if not first:
-                out_f.write('\n')
+                out_f.write("\n")
             first = False
 
             if isinstance(item, dict):
-                name = item.get('name', '').replace('"', '""')
-                mana_cost = item.get('mana_cost', '').replace('"', '""')
-                type_line = item.get('type_line', '').replace('"', '""')
-                oracle_text = item.get('oracle_text', '').replace('"', '""')
-                colors = ','.join(item.get('colors', []))
-                set_name = item.get('set_name', '').replace('"', '""')
-                rarity = item.get('rarity', '').replace('"', '""')
-                artist = item.get('artist', '').replace('"', '""')
-                power = item.get('power', '').replace('"', '""')
-                toughness = item.get('toughness', '').replace('"', '""')
-                cmc = str(item.get('cmc', '')).replace('"', '""')
-                keywords = ','.join(item.get('keywords', []))
+                name = item.get("name", "").replace('"', '""')
+                mana_cost = item.get("mana_cost", "").replace('"', '""')
+                type_line = item.get("type_line", "").replace('"', '""')
+                oracle_text = item.get("oracle_text", "").replace('"', '""')
+                colors = ",".join(item.get("colors", []))
+                set_name = item.get("set_name", "").replace('"', '""')
+                rarity = item.get("rarity", "").replace('"', '""')
+                artist = item.get("artist", "").replace('"', '""')
+                power = item.get("power", "").replace('"', '""')
+                toughness = item.get("toughness", "").replace('"', '""')
+                cmc = str(item.get("cmc", "")).replace('"', '""')
+                keywords = ",".join(item.get("keywords", []))
 
-                oracle_text = oracle_text.replace('\n', ' ').replace('\r', ' ')
+                oracle_text = oracle_text.replace("\n", " ").replace("\r", " ")
 
-                out_f.write(f'"{name}","{mana_cost}","{type_line}","{oracle_text}","{colors}","{set_name}","{rarity}","{artist}","{power}","{toughness}","{cmc}","{keywords}"')
+                out_f.write(
+                    f'"{name}","{mana_cost}","{type_line}","{oracle_text}","{colors}","{set_name}","{rarity}","{artist}","{power}","{toughness}","{cmc}","{keywords}"'
+                )
+
 
 def filter_attributes(input_file, output_file):
+
     desired_attributes = {
-        'name',
-        'mana_cost',
-        'type_line',
-        'oracle_text',
-        'colors',
-        'set_name',
-        'rarity',
-        'artist',
-        'power',
-        'toughness',
-        'cmc',
-        'keywords'
+        "name",
+        "mana_cost",
+        "type_line",
+        "oracle_text",
+        "colors",
+        "set_name",
+        "rarity",
+        "artist",
+        "power",
+        "toughness",
+        "cmc",
+        "keywords",
     }
 
     first = True
-    with open(input_file, 'r', encoding='utf-8') as f, \
-         open(output_file, 'w', encoding='utf-8') as out_f:
-        out_f.write('[\n')
-        for item in ijson.items(f, 'item'):
+    with open(input_file, "r", encoding="utf-8") as f, open(
+        output_file, "w", encoding="utf-8"
+    ) as out_f:
+        out_f.write("[\n")
+        for item in ijson.items(f, "item"):
+            filtered_item = None
             if isinstance(item, dict):
-                filtered_item = {k: v for k, v in item.items() if k in desired_attributes}
-            else:
-                filtered_item = item
+                filtered_item = {}
+                for k, v in item.items():
+                    if k == "card_faces":
+                        for face in v:
+                            for k_sub, v_sub in face.items():
+                                if k_sub in desired_attributes:
+                                    filtered_item[k_sub] = v_sub
+
+                for k, v in item.items():
+                    if k in desired_attributes:
+                        filtered_item[k] = v
 
             if not first:
-                out_f.write(',\n')
+                out_f.write(",\n")
 
             json.dump(filtered_item, out_f, ensure_ascii=False, default=str)
 
             first = False
 
-        out_f.write('\n]\n')
+        out_f.write("\n]\n")
+
 
 def commander_legal(input_file, output_file):
-
     first = True
-    with open(input_file, 'r', encoding='utf-8') as f, \
-         open(output_file, 'w', encoding='utf-8') as out_f:
-        out_f.write('[\n')
-        for item in ijson.items(f, 'item'):
+    with open(input_file, "r", encoding="utf-8") as f, open(
+        output_file, "w", encoding="utf-8"
+    ) as out_f:
+        out_f.write("[\n")
+        for item in ijson.items(f, "item"):
 
             commander_status = None
             if isinstance(item, dict):
-                legalities = item.get('legalities')
+                legalities = item.get("legalities")
                 if isinstance(legalities, dict):
-                    commander_status = legalities.get('commander')
+                    commander_status = legalities.get("commander")
 
-            if commander_status == 'not_legal':
+            if commander_status == "not_legal":
                 continue
 
             if not first:
-                out_f.write(',\n')
-            
+                out_f.write(",\n")
+
             json.dump(item, out_f, ensure_ascii=False, default=str)
 
             first = False
 
-        out_f.write('\n]\n')
+        out_f.write("\n]\n")
+
 
 if __name__ == "__main__":
     main()
