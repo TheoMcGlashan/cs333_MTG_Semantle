@@ -96,7 +96,13 @@ def filter_attributes(input_file, output_file):
                         for face in v:
                             for k_sub, v_sub in face.items():
                                 if k_sub in desired_attributes:
-                                    filtered_item[k_sub] = v_sub
+                                    if k_sub == "oracle_text":
+                                        try:
+                                            filtered_item[k_sub] += " " + v_sub
+                                        except:
+                                            filtered_item[k_sub] = v_sub
+                                    else:
+                                        filtered_item[k_sub] = v_sub
 
                 for k, v in item.items():
                     if k in desired_attributes:
