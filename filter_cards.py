@@ -23,6 +23,14 @@ def main():
         convert_to_csv(input_file, output_file)
     elif usage == "guilds_of_ravnica":
         guilds_of_ravnica(input_file, output_file)
+    elif usage == "names":
+        names(input_file, output_file)
+
+
+def names(input_file, output_file):
+    data = pandas.read_csv(input_file)
+    data = data["name"]
+    data.to_csv(output_file, index=False)
 
 
 def guilds_of_ravnica(input_file, output_file):
