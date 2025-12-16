@@ -7,8 +7,9 @@ from nltk.tokenize import word_tokenize
 # nltk.download('punkt_tab')
 from sklearn.preprocessing import normalize
 import numpy as np
-from math import log, isnan
+from math import log, isnan, sqrt
 import argparse
+
 
 #Default weights for embedding catagories
 TYPE_WEIGHT = 1
@@ -78,7 +79,7 @@ def main():
     """
     #Names for each embedding, assumed same on input for -v
     colnames = ['Creature', 'Instant', 'Sorcery', 'Enchantment','Artifact', 'Planeswalker', 'Battle', 'Land', 'Kindred', 'Basic', 'Snow', 'Legendary',
-                    'text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20',
+                    'text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20','text_21','text_22','text_23','text_24','text_25','text_26','text_27','text_28','text_29','text_30',
                     'W','U','B','R','G','C','Generic','X','Phyrexian','Snow_Mana','Pips','Rarity','Power','Toughness','CMC','Name']
     
 
@@ -116,35 +117,64 @@ def weight_cards(card_data, args):
 
 
     #Adjusting all type embeddings by type_weight
-    card_data.loc[:, :'Legendary']*=args.type
-    #print(card_data.loc[:, :'Legendary'])
+    card_data.loc[:, :'Legendary']= weight_section(card_data.loc[:, :'Legendary'],12)
+    #card_data.loc[:, :'Legendary']*=args.type
 
     #Adjusting all text by text_weight
+
     card_data.loc[:, 'text_1':'text_20']*=args.text
-    #print(card_data.loc[:, 'text_1':'text_20'])
 
     #Adjusting all mana value embeddings by colors_weight
+    card_data.loc[:, 'W':'Pips'] = weight_section(card_data.loc[:, 'W':'Pips'],11)
     card_data.loc[:, 'W':'Pips']*=args.mana
-    #print(card_data.loc[:, 'W':'Pips'])
+    
 
     #Adjusting rarity embeddings text by rarity_weight
+    card_data.loc[:,'Rarity'] = weight_section(card_data.loc[:,'Rarity'],1)
     card_data.loc[:,'Rarity']*=args.rarity
-    #print(card_data.loc[:,'Rarity'])
 
     #Adjusting all power embeddings by power_weight
+    card_data.loc[:, 'Power'] = weight_section(card_data.loc[:, 'Power'],1)
     card_data.loc[:, 'Power']*=args.power
-    #print(card_data.loc[:, 'text_1':'text_20'])
 
     #Adjusting all toughness embeddings by power_weight
+    card_data.loc[:, 'Toughness'] = weight_section(card_data.loc[:, 'Toughness'],1)
     card_data.loc[:, 'Toughness']*=args.toughness
-    #print(card_data.loc[:, 'text_1':'text_20'])
 
     #Adjusting all cmc embeddings by cmc_weight
+    card_data.loc[:, 'CMC'] = weight_section(card_data.loc[:, 'CMC'],1)
     card_data.loc[:, 'CMC']*=args.cmc
-    #print(card_data.loc[:, 'CMC'])
 
-
+    print(card_data)
     return card_data
+
+#does normalizing by finding the width of the "section" and the max val in each column and then applying a function for every value in that column
+#sqrt(value)/sqrt(max+sqrt(width))
+#the hope is to generally end up with a 0-1 range where using square roots means outliers get value but still squished, and the width is double reduced in imact
+#generally 0-1 is the largest jump, then 1-2, etc
+def weight_section(section: pandas.DataFrame, width):
+    if width > 1:
+        for column in section:
+            
+            max = section[column].max()
+            print(max) 
+            if max == 0:
+                continue
+            section[column] = section[column].apply(lambda x: adjusted_values(x,width,max))
+            # max = section[column].max()
+            # section[column] = section[column]- (max/2)
+    else:
+        max = section.max()
+        print(max)
+        section = section.apply(lambda x: adjusted_values(x,width,max))
+        # max = section.max()
+        # section = section - (max/2)
+    return section
+
+def adjusted_values(value, width, max):
+    if value == 0:
+        return 0
+    return sqrt(value)/(sqrt(max+sqrt(width)))
 
 def card2vec(cards_data):
     """Takes a cards data and converts it into 7 different vectors and then appends them:
@@ -178,7 +208,7 @@ def card2vec(cards_data):
 
     text_vecs = text2vec(cards_data.loc[:, 'name'].map(str).values+ " " + cards_data['type_line'].map(str).values + " "+  cards_data['oracle_text'].map(str).values)
     text_vecs = pandas.DataFrame(np.row_stack(text_vecs))
-    text_vecs.columns = ['text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20']
+    text_vecs.columns = ['text_1','text_2','text_3','text_4','text_5','text_6','text_7','text_8','text_9','text_10','text_11','text_12','text_13','text_14','text_15','text_16','text_17','text_18','text_19','text_20','text_21','text_22','text_23','text_24','text_25','text_26','text_27','text_28','text_29','text_30']
 
     combined = pandas.concat([type_vecs,text_vecs,mana_vecs,rarity_vec,power_vec,toughness_vec,cmc_vec,name_vec], axis=1)
     #print(text_vecs)
@@ -194,8 +224,8 @@ def text2vec(text):
                 doc in enumerate(text)]
 
     # train the Doc2vec model
-    model = Doc2Vec(vector_size=20,
-                    min_count=2, epochs=50)
+    model = Doc2Vec(vector_size=30,
+                    min_count=2, epochs=60)
     model.build_vocab(tagged_data)
     model.train(tagged_data,
                 total_examples=model.corpus_count,
@@ -215,31 +245,31 @@ def type2vec(type_line):
     """
     # Card types are Creature, Instant, Sorcery, Enchantment,
     # Artifact, Planeswalker, Battle, Land, kindred, basic, snow, legendary
-    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    vec = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if "Creature" in type_line:
-        vec[0] = 1
+        vec[0] = 1.0
     if "Instant" in type_line:
-        vec[1] = 1
+        vec[1] = 1.0
     if "Sorcery" in type_line:
-        vec[2] = 1
+        vec[2] = 1.0
     if "Enchantment" in type_line:
-        vec[3] = 1
+        vec[3] = 1.0
     if "Artifact" in type_line:
-        vec[4] = 1
+        vec[4] = 1.0
     if "Planeswalker" in type_line:
-        vec[5] = 1
+        vec[5] = 1.0
     if "Battle" in type_line:
-        vec[6] = 1
+        vec[6] = 1.0
     if "Land" in type_line:
-        vec[7] = 1
+        vec[7] = 1.0
     if "Basic" in type_line:
-        vec[8] = 1
+        vec[8] = 1.0
     if "Snow" in type_line:
-        vec[9] = 1
+        vec[9] = 1.0
     if "Legendary" in type_line:
-        vec[10] = 1
+        vec[10] = 1.0
     if "Kindred" in type_line:
-        vec[11] = 1
+        vec[11] = 1.0
     return vec
 
 def mana2vec(mana_cost):
@@ -256,56 +286,56 @@ def mana2vec(mana_cost):
     Generic is the total generic that could be used to cast the spell, Reaper King has Generic = 10 
     """
     if pandas.isnull(mana_cost):
-        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    vec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    vec = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
     for i in mana_cost:
         
         if "W" == i:
-            vec[0] += 1
+            vec[0] += 1.0
         elif "U" == i:
-            vec[1] += 1
+            vec[1] += 1.0
         elif "B" == i:
-            vec[2] += 1
+            vec[2] += 1.0
         elif "R" == i:
-            vec[3] += 1
+            vec[3] += 1.0
         elif "G" == i:
-            vec[4] += 1
+            vec[4] += 1.0
         elif "C" == i:
-            vec[5] += 1
+            vec[5] += 1.0
         elif i.isdigit():
-            vec[6] = float(i)
+            vec[6] += float(i)
         elif "X" == i:
-            vec[7] += 1
+            vec[7] += 1.0
         elif "P" in i:
-            vec[8] += 1
+            vec[8] += 1.0
             if "W" in i:
-                vec[0] += 1
+                vec[0] += 1.0
             if "U" == i:
-                vec[1] += 1
+                vec[1] += 1.0
             if "B" == i:
-                vec[2] += 1
+                vec[2] += 1.0
             if "R" == i:
-                vec[3] += 1
+                vec[3] += 1.0
             if "G" == i:
-             vec[4] += 1
+             vec[4] += 1.0
         elif "S" in i:
-            vec[9] += 1
+            vec[9] += 1.0
         elif "{" in i:
-            vec[10]+=1
+            vec[10]+=1.0
     return vec
 
 def rarity2vec(rarity):
     if rarity == 'common':
-        vec = [1]
+        vec = [1.0]
     elif rarity == 'uncommon':
-        vec = [2]
+        vec = [2.0]
     elif rarity == 'rare':
-        vec = [3]
+        vec = [3.0]
     elif rarity == 'mythic':
-        vec = [4]
+        vec = [4.0]
     else:
-        vec = [0]
+        vec = [0.0]
     return vec
 
 if __name__ == "__main__":

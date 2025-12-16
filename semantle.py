@@ -26,8 +26,8 @@ def main():
     #print(cards.values)
 
     t = time.time()
-
-    distances = sklearn.metrics.pairwise_distances(cards.values, cards.values, n_jobs=10)
+    print(cards.loc[args.name].values.reshape(1,-1))
+    distances = pandas.DataFrame(sklearn.metrics.pairwise_distances(cards.values, cards.loc[args.name].values.reshape(1,-1), n_jobs=10))
 
 
     #change this to sklearn.metrics.parwise_distances
@@ -44,19 +44,20 @@ def main():
     #             for iter in range(len(c1_vals)):
     #                 sum+= (c1_vals[iter]-c2_vals[iter])**2.0
     #             distances[inner][outer]=math.sqrt(sum)
+    print("a")
     print(distances)
 
     final = pandas.DataFrame(distances)
-    final.columns = names
+    #final.columns = names
     final.index = names
     print(final)
-    
-    test = final.loc[:,args.name]
+    print(final.iloc[:,0])
+    test = final.iloc[:,0].sort_values(ascending=False)
     with pandas.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(test.sort_values(ascending=False))
+        print(test)
 
     save_name = "distances-"+file
-    cards.to_csv(save_name, index=0)
+    test.to_csv(save_name, index=0)
     
             
 
