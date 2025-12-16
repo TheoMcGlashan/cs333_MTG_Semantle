@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 
 import ijson
@@ -25,6 +26,14 @@ def main():
         guilds_of_ravnica(input_file, output_file)
     elif usage == "names":
         names(input_file, output_file)
+    elif usage == "remove_reminder_text":
+        remove_reminder_text(input_file, output_file)
+
+
+def remove_reminder_text(input_file, output_file):
+    data = pandas.read_csv(input_file)
+    data["oracle_text"] = data["oracle_text"].replace(r"\(.*?\)", "", regex=True)
+    data.to_csv(output_file, index=False)
 
 
 def names(input_file, output_file):
