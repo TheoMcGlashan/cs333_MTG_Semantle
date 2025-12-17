@@ -2,11 +2,17 @@ import argparse
 import random
 from datetime import date
 from tkinter import *
+import sys
+import os
 
 import pandas
 import pyautogui
 
 from semantle import semantle
+
+# stuff to make it hopefully compile to one file
+if getattr(sys, "frozen", False):
+    os.chdir(sys._MEIPASS)
 
 parser = argparse.ArgumentParser(prog="1", description="2", epilog="<3")
 parser.add_argument("-f", "--file", type=str, default="processed-cards.csv")
@@ -24,7 +30,7 @@ def main():
 
     print(cardname)
 
-    df = semantle(args.file, cardname, savefile=False)
+    df = semantle(args.file, cardname, savefile=True)
 
     # create the gui window with the correct size
     create_gui(geometry, height, df)
