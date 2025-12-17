@@ -171,6 +171,7 @@ def main():
     args = parser.parse_args()
     # print(parser.parse_args())
     file = args.filename
+    print(file)
 
     if args.vector:
         cards_data = pandas.read_csv(file)
@@ -183,7 +184,7 @@ def main():
         )
 
     if args.norm:
-        cards = pandas.read_csv(file)
+        cards = pandas.read_csv(v_previx+file)
         if list(cards.columns) != colnames:  # checks that header matches expected
             print("Bad header")
             print(list(cards.columns))

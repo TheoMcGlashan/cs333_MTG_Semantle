@@ -1,17 +1,28 @@
 import random
 from datetime import date
 from tkinter import *
-
+from semantle import semantle
 import pandas
 import pyautogui
+import argparse
 
+parser = argparse.ArgumentParser(prog='1',
+                    description='2',
+                    epilog='<3')
+parser.add_argument('-f', '--file', type =str, default= "processed-cards.csv")
+parser.add_argument('-c', '--card', type =str, default = 'Colossal Dreadmaw')
+parser.add_argument('-d','--debug', type=bool, default= False, help= "debug")
 
 def main():
+    args = parser.parse_args()
     # get half the screen size
     geometry = get_geometry()
 
     # get a random mtg cardname based on today's date
     cardname = get_cardname()
+    c = semantle(args.file, cardname, savefile=True)
+
+
 
     # create the gui window with the correct size
     create_gui(geometry)
