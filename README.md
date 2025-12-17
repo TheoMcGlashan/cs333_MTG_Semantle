@@ -10,4 +10,6 @@ It can also be run from this exe file:
 
 https://drive.google.com/file/d/1R2TY7jrojBYvK6VKFdoo8P7tv_GYKm2Q/view?usp=drive_link
 
+Note: I couldn't compile to a file that runs on mac without actually having a mac, so it's just an exe. If you only have mac... maybe run it through the command line or get a windows vm or something.
+
 Note: this game is very hard, even for experienced magic players who know a lot of cards.
